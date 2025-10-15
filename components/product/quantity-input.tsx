@@ -11,8 +11,17 @@ type Props = {
 };
 
 export function QuantityInput({ value, min = 1, max = 99, onChange }: Props) {
-  const decrease = () => onChange(Math.max(value - 1, min));
-  const increase = () => onChange(Math.min(value + 1, max));
+  const safeMin = Math.max(0, min);
+  const safeMax = Math.max(max, safeMin);
+
+  const decrease = () => onChange(Math.max(value - 1, safeMin));
+  const increase = () => {
+    if (value >= safeMax) {
+      onChange(Math.max(value, safeMax));
+      return;
+    }
+    onChange(value + 1);
+  };
 
   return (
     <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1">
