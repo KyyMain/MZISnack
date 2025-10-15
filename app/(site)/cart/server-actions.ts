@@ -5,6 +5,11 @@ import { createServerActionClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { updateCartSchema } from '@/lib/validators/cart';
 
+const getProductRecord = <T>(relation: T | T[] | null | undefined): T | null => {
+  if (!relation) return null;
+  return Array.isArray(relation) ? relation[0] ?? null : relation;
+};
+
 export async function updateCartItem(payload: { itemId: number; qty: number }) {
   const user = await getCurrentUser();
   if (!user) {
@@ -48,7 +53,8 @@ export async function updateCartItem(payload: { itemId: number; qty: number }) {
       return { success: false, message: 'Gagal menghapus item.' };
     }
   } else {
-    const stock = item.products?.stock ?? 0;
+    const productRecord = getProductRecord(item.products);
+    const stock = productRecord?.stock ?? 0;
     if (parsed.data.qty > stock) {
       return { success: false, message: 'Jumlah melebihi stok.' };
     }

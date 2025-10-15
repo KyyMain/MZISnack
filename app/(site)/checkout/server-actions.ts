@@ -81,20 +81,24 @@ export async function checkoutOrder(payload: { addressId: number; notes?: string
     return { success: false, message: 'Keranjang kosong.' };
   }
 
-  const sellerIds = new Set(cart.cart_items.map((item) => item.products?.seller_id));
+  const sellerIds = new Set(
+    cart.cart_items.map((item) => getProductRecord(item.products)?.seller_id ?? null),
+  );
   if (sellerIds.size > 1) {
     return { success: false, message: 'Checkout per penjual terlebih dahulu.' };
   }
 
   const items = cart.cart_items;
-  const sellerId = items[0]?.products?.seller_id;
+  const firstProduct = getProductRecord(items[0]?.products);
+  const sellerId = firstProduct?.seller_id;
   if (!sellerId) {
     return { success: false, message: 'Penjual tidak dikenali.' };
   }
 
   for (const item of items) {
-    if ((item.products?.stock ?? 0) < item.qty) {
-      return { success: false, message: `Stok tidak cukup untuk ${item.products?.name}` };
+    const productRecord = getProductRecord(item.products);
+    if ((productRecord?.stock ?? 0) < item.qty) {
+      return { success: false, message: `Stok tidak cukup untuk ${productRecord?.name ?? 'produk'}` };
     }
   }
 
@@ -121,14 +125,18 @@ export async function checkoutOrder(payload: { addressId: number; notes?: string
   }
 
   const { error: itemsError } = await supabase.from('order_items').insert(
-    items.map((item) => ({
-      order_id: order.id,
-      product_id: item.product_id,
-      product_name_snapshot: item.products?.name ?? 'Produk',
-      price: item.price_snapshot,
-      qty: item.qty,
-      subtotal: item.qty * item.price_snapshot,
-    })),
+    items.map((item) => {
+      const productRecord = getProductRecord(item.products);
+      return {
+        order_id: order.id,
+        product_id: item.product_id,
+        product_name_snapshot: productRecord?.name ?? 'Produk',
+        price: item.price_snapshot,
+        qty: item.qty,
+        subtotal: item.qty * item.price_snapshot,
+      };
+    }),
+    ),
   );
 
   if (itemsError) {
@@ -153,3 +161,7 @@ export async function checkoutOrder(payload: { addressId: number; notes?: string
 
   return { success: true };
 }
+const getProductRecord = <T>(relation: T | T[] | null | undefined): T | null => {
+  if (!relation) return null;
+  return Array.isArray(relation) ? relation[0] ?? null : relation;
+};
