@@ -124,20 +124,21 @@ export async function checkoutOrder(payload: { addressId: number; notes?: string
     return { success: false, message: 'Gagal membuat pesanan.' };
   }
 
-  const { error: itemsError } = await supabase.from('order_items').insert(
-    items.map((item) => {
-      const productRecord = getProductRecord(item.products);
-      return {
-        order_id: order.id,
-        product_id: item.product_id,
-        product_name_snapshot: productRecord?.name ?? 'Produk',
-        price: item.price_snapshot,
-        qty: item.qty,
-        subtotal: item.qty * item.price_snapshot,
-      };
-    }),
-    ),
-  );
+  const { error: itemsError } = await supabase
+    .from('order_items')
+    .insert(
+      items.map((item) => {
+        const productRecord = getProductRecord(item.products);
+        return {
+          order_id: order.id,
+          product_id: item.product_id,
+          product_name_snapshot: productRecord?.name ?? 'Produk',
+          price: item.price_snapshot,
+          qty: item.qty,
+          subtotal: item.qty * item.price_snapshot,
+        };
+      }),
+    );
 
   if (itemsError) {
     return { success: false, message: 'Gagal menyimpan detail pesanan.' };
